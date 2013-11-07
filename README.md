@@ -1,4 +1,4 @@
-wp-weibo-login
+Login With Weibo (Weibo Login)
 ==============
 
-A Wordpress plugin to allow OAuth login with the largest Chinese social media, Weibo
+Login with Weibo is a wordpress plugin which allows OAuth login from largest Chinese social media, Weibo, right into your wordpress blog.
