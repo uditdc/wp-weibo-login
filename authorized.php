@@ -33,3 +33,4 @@ if ($token){
 	$weibo_login = new Weibo_Login;
 	$weibo_login->do_login($token);
 }
+
