@@ -153,13 +153,14 @@ class SaeTOAuthV2 {
 	 *  - apponweibo	站内应用专用,站内应用不传display参数,并且response_type为token时,默认使用改display.授权后不会返回access_token，只是输出js刷新站内应用父框架
 	 * @return array
 	 */
-	function getAuthorizeURL( $url, $response_type = 'code', $state = NULL, $display = NULL ) {
+	function getAuthorizeURL( $url, $response_type = 'code', $state = NULL, $display = NULL, $scope = 'all' ) {
 		$params = array();
 		$params['client_id'] = $this->client_id;
 		$params['redirect_uri'] = $url;
 		$params['response_type'] = $response_type;
 		$params['state'] = $state;
 		$params['display'] = $display;
+		$params['scope'] = $scope;
 		return $this->authorizeURL() . "?" . http_build_query($params);
 	}
 
@@ -319,22 +320,22 @@ class SaeTOAuthV2 {
 
 		if (strrpos($url, 'http://') !== 0 && strrpos($url, 'https://') !== 0) {
 			$url = "{$this->host}{$url}.{$this->format}";
-	}
+		}
 
-	switch ($method) {
-		case 'GET':
-			$url = $url . '?' . http_build_query($parameters);
-			return $this->http($url, 'GET');
-		default:
-			$headers = array();
-			if (!$multi && (is_array($parameters) || is_object($parameters)) ) {
-				$body = http_build_query($parameters);
-			} else {
-				$body = self::build_http_query_multi($parameters);
-				$headers[] = "Content-Type: multipart/form-data; boundary=" . self::$boundary;
-			}
-			return $this->http($url, $method, $body, $headers);
-	}
+		switch ($method) {
+			case 'GET':
+				$url = $url . '?' . http_build_query($parameters);
+				return $this->http($url, 'GET');
+			default:
+				$headers = array();
+				if (!$multi && (is_array($parameters) || is_object($parameters)) ) {
+					$body = http_build_query($parameters);
+				} else {
+					$body = self::build_http_query_multi($parameters);
+					$headers[] = "Content-Type: multipart/form-data; boundary=" . self::$boundary;
+				}
+				return $this->http($url, $method, $body, $headers);
+		}
 	}
 
 	/**

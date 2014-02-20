@@ -13,7 +13,7 @@ class Weibo_Login_Settings {
 		add_action( 'admin_menu', array( $this, 'add_plugin_page' ) );
 		add_action( 'admin_init', array( $this, 'page_init' ) );
 
-		$this->callback_url = admin_url("admin-ajax.php?action=weibo_login_authorized");
+		$this->callback_url = site_url('wp-login.php') . '?weibo_login=1';
 		$this->options = get_option( 'weibo_login_settings' );
 	}
 
@@ -125,7 +125,7 @@ class Weibo_Login_Settings {
 		$html[] = "<br>";
 		$html[] = "<h3>Embedding in themes</h3>";
 		$html[] = "<p>The code below can be used to display a link/button in your theme</p>";
-		$html[] = "Button Link 	: <code>" . $this->callback_url . "</code>";
+		$html[] = "Button Link 	: <code><a href='" .  $this->callback_url . "'>" .  $this->callback_url . "</a></code>";
 		$html[] = "<br>";
 		$html[] = "Normal Link	: <code>" . $this->callback_url . "</code>";
 		$html[] = "<hr>";
@@ -152,3 +152,5 @@ class Weibo_Login_Settings {
 		);
 	}
 }
+
+new Weibo_Login_Settings();

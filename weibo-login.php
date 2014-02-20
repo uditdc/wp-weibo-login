@@ -25,8 +25,9 @@ License:
 */
 
 
-require_once 'include/weibo-login-admin.php';
 require_once 'sdk/saetv2.ex.class.php';
+require_once 'include/weibo-login-api.php';
+require_once 'include/weibo-login-admin.php';
 require_once 'include/weibo-login-settings.php';
 
 
@@ -45,34 +46,28 @@ class Weibo_Login {
 		$this->plugin_path = dirname( __FILE__ );
 		// Set the plugin url
 		$this->plugin_url = WP_PLUGIN_URL . DIRECTORY_SEPARATOR . plugin_basename( __DIR__ ) . DIRECTORY_SEPARATOR;
-
-		// Load all the settings for Baidu Maps
-		$this->settings = get_option( 'weibo_login_settings' );
-
+		// Load Textdomain
 		load_plugin_textdomain( 'weibo-login', false, dirname( plugin_basename( __FILE__ ) ) . '/lang/' );
 
-		add_action( 'admin_enqueue_scripts', array( $this, 'register_admin_scripts' ) );
-		add_action( 'wp_enqueue_scripts', array( $this, 'register_scripts' ) );
-
-		// add_action( 'admin_notices', array( $this, 'display_admin_notices' ) );
-
-		// Callback Functions
-		add_action('wp_ajax_weibo_login_authorized', array($this, 'weibo_login_authorized'));
-		add_action('wp_ajax_weibo_login_failed', array($this, 'weibo_login_failed'));
-
-
-		// Initialize the admin interface
-		$admin = new Weibo_Login_Admin($this->plugin_url, $this->plugin_path);
-		$settings = new Weibo_Login_Settings();
-
-		// $this->client_id = '1686503323';
-		// $this->client_secret = 'b20453508497ba25e482368aa35ff9df';
+		// Register Activation Function
+		register_activation_hook( __FILE__, array( $this, 'activate' ) );
+		
+		// Load all the settings for Weibo Login
+		$this->settings = get_option( 'weibo_login_settings' );
 		
 		$this->client_id = $this->settings['app_id'];
 		$this->client_secret = $this->settings['app_secret'];
+		$this->callback_url = site_url('wp-login.php') . '?weibo_login=1';
 
-		$this->callback_url = admin_url("admin-ajax.php?action=weibo_login_authorized");
+		$this->sdk = new SaeTOAuthV2($this->client_id, $this->client_secret);
+		$this->request_url = $this->sdk->getAuthorizeURL($this->callback_url);
 
+		// Initialize the admin interface
+		$this->admin = new Weibo_Login_Admin($this->plugin_url, $this->request_url);
+
+
+		// Setup Hooks
+		$this->setup_hooks();
 	}
 
 
@@ -84,7 +79,32 @@ class Weibo_Login {
 	 * Upon activation, create and show the options_page with default options.
 	 */
 	public function activate() {
+		global $wpdb;
+		$weibo_login = $wpdb->prefix . "weibo_login";
+		
+		
+			//include the wordpress db functions
+		require_once(ABSPATH . 'wp-admin/upgrade-functions.php');
+	 
+		//check if there are any tables of that name already
+		if($wpdb->get_var("show tables like '$weibo_login'") !== $weibo_login) 
+		{
+			//create your sql
+			$sql =  "CREATE TABLE ". $weibo_login . " (
+						  ID int(11) NOT NULL, 
+						  type varchar(20) NOT NULL,
+						  userid varchar(100) NOT NULL,
+						  PRIMARY KEY ID (ID));";
+			dbDelta($sql);
 
+		}
+
+		if (!isset($wpdb->weibo_login))
+		{
+			$wpdb->weibo_login = $weibo_login; 
+			$wpdb->tables[] = str_replace($wpdb->prefix, '', $weibo_login); 
+		}
+		
 	}
 
 	/**
@@ -102,39 +122,41 @@ class Weibo_Login {
 
 	}
 
-	public function do_login($token){
-		// Sample code to 
-		$c = new SaeTClientV2( $client_id , $client_secret , $token['access_token'] );
-		$uid_get = $c->get_uid();
-		$uid = $uid_get['uid'];
-		$user_message = $c->show_user_by_id($uid);
 
-		var_dump($user_message);
+	private function setup_hooks(){
+		// Enqueue Scripts
+		add_action( 'admin_enqueue_scripts', array( $this, 'register_admin_scripts' ) );
+		add_action( 'wp_enqueue_scripts', array( $this, 'register_scripts' ) );
+
+		// Callback Functions
+		add_action('login_init', array($this, 'weibo_login_authorized'));
+		// add_action('wp_ajax_nopriv_weibo_login_authorized', array($this, 'weibo_login_authorized'));
+		// add_action('wp_ajax_weibo_login_failed', array($this, 'weibo_login_failed'));
+		// add_action('wp_ajax_nopriv_weibo_login_failed', array($this, 'weibo_login_failed'));
 	}
 
-	public function weibo_login_authorized(){
-		$o = new SaeTOAuthV2($this->client_id, $this->client_secret);
 
-		if (isset($_REQUEST['code'])) {
+	
+
+	public function weibo_login_authorized(){
+
+		if (isset($_REQUEST['code']) && $_REQUEST['weibo_login'] == 1) {
 			$keys = array();
 			$keys['code'] = $_REQUEST['code'];
 			$keys['redirect_uri'] = $this->callback_url;
 
 			try{
-				$token = $o->getAccessToken('code', $keys);
-				var_dump($token);
+				$token = $this->sdk->getAccessToken('code', $keys);
+
 			}catch(OAuthException $e){
 
 			}
 		}
 
 		if ($token){
-			$weibo_login = new Weibo_Login;
-			$weibo_login->do_login($token);
-		}else{
-			echo 'no';
+			$weibo_login = new Weibo_Login_API($token, $this->sdk);
+			$weibo_login->do_login();
 		}
-		die('');
 	}
 
 	public function weibo_login_failed(){
@@ -142,17 +164,9 @@ class Weibo_Login {
 		die('');
 	}
 
-	public function display_admin_notices() {
-		
-		$sdk = new SaeTOAuthV2($this->client_id, $this->client_secret);
-		$request_uri = $sdk->getAuthorizeURL($this->callback_url);
-
-		$notice[] = "<div class='error'>";
-		$notice[] = "<p><a href='" . $request_uri . "'>Login Here</a></p> </div>";
-
-		echo implode( "\n", $notice );
-
-	}
-
 }
+
+
+// Call the plugin!
 new Weibo_Login;
+
