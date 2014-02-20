@@ -14,7 +14,7 @@ class Weibo_Login_API {
 		$uid_get = $c->get_uid();
 		$uid = $uid_get['uid'];
 		$user = $c->show_user_by_id($uid); // $user = $c->account_profile_basic($uid); (After Authentication)
-		$user['email'] = 'it01@konaxis.com'; // Temp till authentication		
+		$user['email'] = ''; // Temp till authentication		
 		// var_dump($user);
 
 		// Check if Weibo ID Exists in database.
@@ -27,11 +27,6 @@ class Weibo_Login_API {
 		}else{
 			$user_id = $this->register_webio_user($uid, $user);
 		}
-
-
-		// $email = $user['email'];
-		// $email = 'udit.cp@gmail.com';
-		// echo $email;
 
 		/**
 		*		@TODO - If Email doesn not exist, input the email form the user.
