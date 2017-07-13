@@ -93,7 +93,7 @@ class Weibo_Login {
 			$sql =  "CREATE TABLE ". $weibo_login . " (
 						  ID int(11) NOT NULL, 
 						  type varchar(20) NOT NULL,
-						  userid varchar(100) NOT NULL,
+						  weibo_id varchar(100) NOT NULL,
 						  PRIMARY KEY ID (ID));";
 			dbDelta($sql);
 
