@@ -71,7 +71,7 @@ class Weibo_Login_API {
 		global $wpdb;
 		$table = $wpdb->prefix . 'weibo_login';
 
-		$user = $wpdb->get_row("SELECT ID FROM wp_weibo_login WHERE weibo_id = '$uid'");
+		$user = $wpdb->get_row("SELECT ID FROM $table WHERE weibo_id = '$uid'");
 		return $user->ID;
 	}
 
